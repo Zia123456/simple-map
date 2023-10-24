@@ -1,29 +1,63 @@
+import Feature from 'ol/Feature.js';
 import Map from 'ol/Map.js';
-import OSM from 'ol/source/OSM.js';
-import TileLayer from 'ol/layer/Tile.js';
+import Point from 'ol/geom/Point.js';
 import View from 'ol/View.js';
+import { Icon, Style } from 'ol/style.js';
+import { StadiaMaps, Vector as VectorSource } from 'ol/source.js';
+import { Tile as TileLayer, Vector as VectorLayer } from 'ol/layer.js';
+
+const iconFeature = new Feature({
+  geometry: new Point([0, 0]),
+});
+
+const vectorSource = new VectorSource({
+  features: [iconFeature],
+});
+
+const vectorLayer = new VectorLayer({
+  source: vectorSource,
+});
+
+const rasterLayer = new TileLayer({
+  source: new StadiaMaps({
+    layer: 'stamen_toner',
+  }),
+});
 
 const map = new Map({
-  layers: [
-    new TileLayer({
-      source: new OSM(),
-    }),
-  ],
-  target: 'map',
+  layers: [rasterLayer, vectorLayer],
+  target: document.getElementById('map'),
   view: new View({
     center: [0, 0],
     zoom: 2,
   }),
 });
 
-document.getElementById('zoom-out').onclick = function () {
-  const view = map.getView();
-  const zoom = view.getZoom();
-  view.setZoom(zoom - 1);
-};
+const gifUrl = '';
+const gif = gifler(gifUrl);
+gif.frames(
+  document.createElement('canvas'),
+  function (ctx, frame) {
+    if (!iconFeature.getStyle()) {
+      iconFeature.setStyle(
+        new Style({
+          image: new Icon({
+            img: ctx.canvas,
+            opacity: 0.8,
+          }),
+        }),
+      );
+    }
+    ctx.clearRect(0, 0, frame.width, frame.height);
+    ctx.drawImage(frame.buffer, frame.x, frame.y);
+    map.render();
+  },
+  true,
+);
 
-document.getElementById('zoom-in').onclick = function () {
-  const view = map.getView();
-  const zoom = view.getZoom();
-  view.setZoom(zoom + 1);
-};
+// change mouse cursor when over icon
+map.on('pointermove', function (e) {
+  const pixel = map.getEventPixel(e.originalEvent);
+  const hit = map.hasFeatureAtPixel(pixel);
+  map.getTarget().style.cursor = hit ? 'pointer' : '';
+});
